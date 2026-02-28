@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dashboard • Finance App</title>
+  <link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"><img src="/assets/img/logo.png" alt=""/></div>
+        <div>
+          <h1 id="brandTitle">My Business Finance</h1>
+          <small></small>
+        </div>
+      </div>
+      <div class="userchip" id="topbarUser"></div>
+    </div>
+
+    <div class="grid">
+      <aside class="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html">Dashboard <span class="badge" data-count="income">0</span></a>
+          <a href="income.html">Income <span class="badge" data-count="income">0</span></a>
+          <a href="expense.html">Expense <span class="badge" data-count="expense">0</span></a>
+          <a href="sales.html">Sales <span class="badge" data-count="sales">0</span></a>
+          <a href="clients.html">Clients <span class="badge" data-count="clients">0</span></a>
+          <a href="purchases.html">Purchases <span class="badge" data-count="purchases">0</span></a>
+          <a href="bank.html">Bank <span class="badge" data-count="bank">0</span></a>
+          <a href="approvals.html">Approvals <span class="badge" id="pendingBadge" data-count="approvals">0</span></a>
+          <a href="reports.html">Reports <span class="badge">CSV</span></a>
+          <a href="settings.html">Settings <span class="badge">Admin</span></a>
+          <a href="profile.html">Profile <span class="badge">Me</span></a>
+          <a href="help.html">Help <span class="badge">Guide</span></a>
+        </nav>
+        <hr/>
+        <div class="small">
+          <b>Login default:</b><br/>
+          admin / admin123<br/>
+          manager / manager123<br/>
+          <div style="margin-top:10px">
+            <button class="btn btn-small" id="btnBackup">Backup</button>
+            <button class="btn btn-small" id="btnReset">Reset</button>
+          </div>
+          <div style="margin-top:8px" class="small">
+            Backup downloads JSON (safe). Reset clears local data for this browser.
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        
+<div class="vstack">
+  <div class="hstack" style="justify-content:space-between;">
+    <div>
+      <h2 style="margin:0">Dashboard</h2>
+      <div class="small">Quick overview, charts, and Profit/Loss summary.</div>
+    </div>
+    <div class="hstack">
+      <button class="btn btn-small" id="btnAddSample">Add Sample Data</button>
+      <button class="btn btn-small" id="btnClearSample">Clear All Data</button>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi">
+      <div class="label">Total Income</div>
+      <div class="value" id="kpiIncome">0</div>
+      <div class="sub" id="kpiIncomeSub"></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Total Expense</div>
+      <div class="value" id="kpiExpense">0</div>
+      <div class="sub" id="kpiExpenseSub"></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Profit / Loss</div>
+      <div class="value" id="kpiPL">0</div>
+      <div class="sub" id="kpiPLSub"></div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Bank Balance</div>
+      <div class="value" id="kpiBank">0</div>
+      <div class="sub" id="kpiBankSub"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hstack" style="justify-content:space-between;">
+      <b>Monthly Income vs Expense</b>
+      <span class="small">Last 12 months</span>
+    </div>
+    <div style="height:240px; margin-top:10px">
+      <canvas id="barChart" style="width:100%; height:240px"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hstack" style="justify-content:space-between;">
+      <b>Expense by Category</b>
+      <span class="small">All time</span>
+    </div>
+    <div class="hstack" style="gap:18px; align-items:flex-start; margin-top:10px">
+      <div style="flex:1; min-width:280px; height:220px">
+        <canvas id="donutChart" style="width:100%; height:220px"></canvas>
+      </div>
+      <div style="flex:1; min-width:260px" id="donutLegend" class="vstack"></div>
+    </div>
+  </div>
+</div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/ui.js"></script>
+  
+<script src="assets/js/charts.js"></script>
+<script>
+(function(){
+  const auth = BMApp.requireAuth();
+  if(!auth) return;
+  const {st} = auth;
+  const currency = st.company.currency || "";
+
+  function sumApproved(list){
+    return (list||[]).filter(r=>r.status!=="rejected").filter(r=>r.status==="approved" || r.status==="pending"? false : true);
+  }
+
+  function sum(list){
+    return (list||[]).filter(r=>r.status==="approved").reduce((a,b)=>a+Number(b.amount||0),0);
+  }
+
+  function bankBalance(){
+    const bank = (st.data.bank||[]).filter(r=>r.status==="approved");
+    // bank: type deposit/withdraw
+    return bank.reduce((a,b)=>{
+      const amt = Number(b.amount||0);
+      return a + (b.txnType==="withdraw" ? -amt : amt);
+    },0);
+  }
+
+  function profitLoss(){
+    // Sales revenue - Purchases cost - Expenses + other income
+    const income = sum(st.data.income);
+    const expense = sum(st.data.expense);
+    const sales = (st.data.sales||[]).filter(r=>r.status==="approved").reduce((a,b)=>a+Number(b.total||0),0);
+    const purchases = (st.data.purchases||[]).filter(r=>r.status==="approved").reduce((a,b)=>a+Number(b.total||0),0);
+    const pl = (income + sales) - (expense + purchases);
+    return {income, expense, sales, purchases, pl};
+  }
+
+  function renderKpis(){
+    const {income, expense, sales, purchases, pl} = profitLoss();
+    BMApp.qs("#kpiIncome").textContent = BMApp.fmtMoney(income + sales, currency);
+    BMApp.qs("#kpiExpense").textContent = BMApp.fmtMoney(expense + purchases, currency);
+    BMApp.qs("#kpiPL").textContent = BMApp.fmtMoney(pl, currency);
+    BMApp.qs("#kpiBank").textContent = BMApp.fmtMoney(bankBalance(), currency);
+
+    BMApp.qs("#kpiIncomeSub").textContent = `Income: ${BMApp.fmtMoney(income,currency)} • Sales: ${BMApp.fmtMoney(sales,currency)}`;
+    BMApp.qs("#kpiExpenseSub").textContent = `Expense: ${BMApp.fmtMoney(expense,currency)} • Purchases: ${BMApp.fmtMoney(purchases,currency)}`;
+    BMApp.qs("#kpiPLSub").textContent = pl>=0 ? "Net Profit" : "Net Loss";
+    BMApp.qs("#kpiBankSub").textContent = "Deposits - Withdrawals";
+  }
+
+  function renderCharts(){
+    // monthly: income+sales vs expense+purchases
+    const incomeList = (st.data.income||[]).filter(r=>r.status==="approved").map(r=>({date:r.date||r.createdAt, amount:Number(r.amount||0)}));
+    const salesList = (st.data.sales||[]).filter(r=>r.status==="approved").map(r=>({date:r.date||r.createdAt, amount:Number(r.total||0)}));
+    const expenseList = (st.data.expense||[]).filter(r=>r.status==="approved").map(r=>({date:r.date||r.createdAt, amount:Number(r.amount||0)}));
+    const purchaseList = (st.data.purchases||[]).filter(r=>r.status==="approved").map(r=>({date:r.date||r.createdAt, amount:Number(r.total||0)}));
+
+    const incMonthly = BMCharts.groupMonthly(incomeList.concat(salesList),"amount");
+    const expMonthly = BMCharts.groupMonthly(expenseList.concat(purchaseList),"amount");
+
+    // merge keys
+    const keySet = new Set([...incMonthly.map(x=>x.k), ...expMonthly.map(x=>x.k)]);
+    const keys = Array.from(keySet).sort().slice(-12);
+    const items = keys.map(k=>{
+      const inc = incMonthly.find(x=>x.k===k)?.v || 0;
+      const exp = expMonthly.find(x=>x.k===k)?.v || 0;
+      // store inc-exp in one bar for simplicity, but show inc as positive stacked? We'll show net
+      return {k, v: Math.max(inc, exp, 0) || 0, _inc:inc, _exp:exp};
+    });
+
+    const bar = BMApp.qs("#barChart");
+    BMCharts.drawBarChart(bar, items.map(x=>({k:x.k, v:x._inc})));
+
+    // donut expense categories
+    const cats = new Map();
+    (st.data.expense||[]).filter(r=>r.status==="approved").forEach(r=>{
+      const c = (r.category||"Other").trim() || "Other";
+      cats.set(c, (cats.get(c)||0) + Number(r.amount||0));
+    });
+    const items2 = Array.from(cats.entries()).map(([k,v])=>({k,v})).sort((a,b)=>b.v-a.v).slice(0,6);
+    const donut = BMApp.qs("#donutChart");
+    BMCharts.drawDonut(donut, items2);
+
+    const legend = BMApp.qs("#donutLegend");
+    legend.innerHTML = "";
+    items2.forEach(it=>{
+      const row = document.createElement("div");
+      row.className="hstack";
+      row.style.justifyContent="space-between";
+      row.innerHTML = `<span>${BMUI.escapeHtml(it.k)}</span><b>${BMApp.fmtMoney(it.v, currency)}</b>`;
+      legend.appendChild(row);
+    });
+    if(!items2.length){
+      legend.innerHTML = `<div class="small">No expense data yet.</div>`;
+    }
+  }
+
+  function addSample(){
+    const today = new Date();
+    const iso = (d)=>d.toISOString().slice(0,10);
+    const shift=(days)=>{ const x=new Date(today); x.setDate(x.getDate()+days); return x; };
+
+    const samples = [
+      ()=>BMApp.addRecord("income",{date:iso(shift(-10)), source:"Client Payment", category:"Service", amount:50000, note:"Invoice #101"}, null),
+      ()=>BMApp.addRecord("expense",{date:iso(shift(-9)), vendor:"Office", category:"Rent", amount:15000, note:"January"}, null),
+      ()=>BMApp.addRecord("expense",{date:iso(shift(-8)), vendor:"Fuel", category:"Transport", amount:6000, note:"Delivery"}, null),
+      ()=>BMApp.addRecord("sales",{date:iso(shift(-7)), customer:"Walk-in", item:"Dry Fruits", qty:10, price:1200}, null),
+      ()=>BMApp.addRecord("purchases",{date:iso(shift(-7)), supplier:"Wholesale", item:"Dry Fruits", qty:10, cost:800}, null),
+      ()=>BMApp.addRecord("bank",{date:iso(shift(-6)), txnType:"deposit", account:"Cash", amount:20000, note:"Deposit"}, null),
+      ()=>BMApp.addRecord("bank",{date:iso(shift(-5)), txnType:"withdraw", account:"Cash", amount:5000, note:"ATM"}, null),
+    ];
+    for(const fn of samples){ fn(); }
+    BMApp.toast("Sample data added!", "good");
+    location.reload();
+  }
+
+  function clearAll(){
+    if(confirm("Delete ALL records (income/expense/sales/purchases/bank/approvals)?")){
+      const st2 = BMApp.loadState();
+      st2.data.income=[]; st2.data.expense=[]; st2.data.sales=[]; st2.data.purchases=[]; st2.data.bank=[]; st2.data.approvals=[];
+      BMApp.saveState(st2);
+      BMApp.toast("All records cleared.", "warn");
+      location.reload();
+    }
+  }
+
+  BMApp.qs("#btnAddSample").addEventListener("click", addSample);
+  BMApp.qs("#btnClearSample").addEventListener("click", clearAll);
+
+  renderKpis();
+  renderCharts();
+})();
+</script>
+
+  <script>
+    // global sidebar actions
+    (function(){
+      const auth = BMApp.requireAuth();
+      if(!auth) return;
+      BMUI.renderTopbar();
+      BMUI.setActiveNav();
+      BMUI.setCounts();
+
+      const backupBtn = BMApp.qs("#btnBackup");
+      if(backupBtn) backupBtn.addEventListener("click", ()=>BMApp.downloadBackup());
+
+      const resetBtn = BMApp.qs("#btnReset");
+      if(resetBtn) resetBtn.addEventListener("click", ()=>{
+        if(confirm("Reset all data on this browser?")){
+          BMApp.resetAll();
+          BMApp.toast("Reset done. Please login again.", "warn");
+          setTimeout(()=>location.href="login.html", 500);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

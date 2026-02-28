@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Help • Finance App</title>
+  <link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"><img src="/assets/img/logo.png" alt=""/></div>
+        <div>
+          <h1 id="brandTitle">My Business Finance</h1>
+          <small></small>
+        </div>
+      </div>
+      <div class="userchip" id="topbarUser"></div>
+    </div>
+
+    <div class="grid">
+      <aside class="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html">Dashboard <span class="badge" data-count="income">0</span></a>
+          <a href="income.html">Income <span class="badge" data-count="income">0</span></a>
+          <a href="expense.html">Expense <span class="badge" data-count="expense">0</span></a>
+          <a href="sales.html">Sales <span class="badge" data-count="sales">0</span></a>
+          <a href="clients.html">Clients <span class="badge" data-count="clients">0</span></a>
+          <a href="purchases.html">Purchases <span class="badge" data-count="purchases">0</span></a>
+          <a href="bank.html">Bank <span class="badge" data-count="bank">0</span></a>
+          <a href="approvals.html">Approvals <span class="badge" id="pendingBadge" data-count="approvals">0</span></a>
+          <a href="reports.html">Reports <span class="badge">CSV</span></a>
+          <a href="settings.html">Settings <span class="badge">Admin</span></a>
+          <a href="profile.html">Profile <span class="badge">Me</span></a>
+          <a href="help.html">Help <span class="badge">Guide</span></a>
+        </nav>
+        <hr/>
+        <div class="small">
+          <b>Login default:</b><br/>
+          admin / admin123<br/>
+          manager / manager123<br/>
+          <div style="margin-top:10px">
+            <button class="btn btn-small" id="btnBackup">Backup</button>
+            <button class="btn btn-small" id="btnReset">Reset</button>
+          </div>
+          <div style="margin-top:8px" class="small">
+            Backup downloads JSON (safe). Reset clears local data for this browser.
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        
+<div class="vstack">
+  <h2 style="margin:0">Help</h2>
+  <div class="card">
+    <b>How to Use</b>
+    <ol>
+      <li>Open <b>login.html</b> and login.</li>
+      <li>Add records in Income, Expense, Sales, Purchases, Bank.</li>
+      <li>Dashboard shows charts + profit/loss.</li>
+      <li>Reports page exports CSV and shows P/L.</li>
+      <li>Use <b>Backup</b> (JSON) regularly.</li>
+    </ol>
+    <hr/>
+    <b>Hosting (Netlify / any host)</b>
+    <ol>
+      <li>Upload ALL files exactly as they are (keep folders).</li>
+      <li>Set publish directory to the root folder.</li>
+      <li>Open <b>login.html</b> in browser (or set it as default).</li>
+    </ol>
+    <div class="small">
+      Note: This app is a static site. Data is saved in the visitor's browser only (localStorage). If you need multi-user shared database, then we will upgrade to backend (Firebase / Supabase / MySQL).
+    </div>
+  </div>
+
+  <div class="card">
+    <b>Common Fix: 404 Not Found</b>
+    <div class="small" style="margin-top:8px">
+      Ensure your host has <b>login.html</b> and <b>index.html</b> in the root.
+      If you are opening a link like /test or /dashboard, make sure those files exist.
+      If host default page is required, rename <b>login.html</b> to <b>index.html</b> or set redirect rules.
+    </div>
+  </div>
+</div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script>BMApp.requireAuth();</script>
+  <script>
+    // global sidebar actions
+    (function(){
+      const auth = BMApp.requireAuth();
+      if(!auth) return;
+      BMUI.renderTopbar();
+      BMUI.setActiveNav();
+      BMUI.setCounts();
+
+      const backupBtn = BMApp.qs("#btnBackup");
+      if(backupBtn) backupBtn.addEventListener("click", ()=>BMApp.downloadBackup());
+
+      const resetBtn = BMApp.qs("#btnReset");
+      if(resetBtn) resetBtn.addEventListener("click", ()=>{
+        if(confirm("Reset all data on this browser?")){
+          BMApp.resetAll();
+          BMApp.toast("Reset done. Please login again.", "warn");
+          setTimeout(()=>location.href="login.html", 500);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

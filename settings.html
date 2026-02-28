@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Settings • Finance App</title>
+  <link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"><img src="/assets/img/logo.png" alt=""/></div>
+        <div>
+          <h1 id="brandTitle">My Business Finance</h1>
+          <small></small>
+        </div>
+      </div>
+      <div class="userchip" id="topbarUser"></div>
+    </div>
+
+    <div class="grid">
+      <aside class="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html">Dashboard <span class="badge" data-count="income">0</span></a>
+          <a href="income.html">Income <span class="badge" data-count="income">0</span></a>
+          <a href="expense.html">Expense <span class="badge" data-count="expense">0</span></a>
+          <a href="sales.html">Sales <span class="badge" data-count="sales">0</span></a>
+          <a href="clients.html">Clients <span class="badge" data-count="clients">0</span></a>
+          <a href="purchases.html">Purchases <span class="badge" data-count="purchases">0</span></a>
+          <a href="bank.html">Bank <span class="badge" data-count="bank">0</span></a>
+          <a href="approvals.html">Approvals <span class="badge" id="pendingBadge" data-count="approvals">0</span></a>
+          <a href="reports.html">Reports <span class="badge">CSV</span></a>
+          <a href="settings.html">Settings <span class="badge">Admin</span></a>
+          <a href="profile.html">Profile <span class="badge">Me</span></a>
+          <a href="help.html">Help <span class="badge">Guide</span></a>
+        </nav>
+        <hr/>
+        <div class="small">
+          <b>Login default:</b><br/>
+          admin / admin123<br/>
+          manager / manager123<br/>
+          <div style="margin-top:10px">
+            <button class="btn btn-small" id="btnBackup">Backup</button>
+            <button class="btn btn-small" id="btnReset">Reset</button>
+          </div>
+          <div style="margin-top:8px" class="small">
+            Backup downloads JSON (safe). Reset clears local data for this browser.
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        
+<div class="vstack">
+  <div class="hstack" style="justify-content:space-between;">
+    <div>
+      <h2 style="margin:0">Settings</h2>
+      <div class="small">Company info, users, and approval settings (Admin only).</div>
+    </div>
+  </div>
+
+  <div class="card" id="adminGate">
+    <b>Admin Only</b>
+    <div class="small" style="margin-top:8px">You must be Admin to edit settings.</div>
+  </div>
+
+  <div class="card" id="settingsPanel" style="display:none">
+    <b>Company</b>
+    <div class="formgrid" style="margin-top:10px; grid-template-columns: 1fr 1fr 140px;">
+      <div>
+        <label>Company Name</label>
+        <input class="input" id="companyName" placeholder="e.g. B & M COAL TRADERS"/>
+      </div>
+      <div>
+        <label>Currency</label>
+        <input class="input" id="currency" placeholder="PKR"/>
+      </div>
+      <div style="display:flex; align-items:flex-end">
+        <button class="btn btn-primary" id="btnSaveCompany">Save</button>
+      </div>
+    </div>
+
+    <hr/>
+    <b>Approval Workflow</b>
+    <div class="hstack" style="margin-top:10px; justify-content:space-between;">
+      <div class="small">If enabled: Manager entries become <span class="pill warn">pending</span> until Admin approves.</div>
+      <div class="hstack">
+        <select class="input" id="requireApproval" style="max-width:200px">
+          <option value="false">Approval: OFF</option>
+          <option value="true">Approval: ON</option>
+        </select>
+        <button class="btn btn-primary" id="btnSaveApproval">Save</button>
+      </div>
+    </div>
+
+    <hr/>
+    <b>Users</b>
+    <div class="small" style="margin-top:6px">Change passwords here (recommended).</div>
+    <div id="userList" class="vstack" style="margin-top:10px"></div>
+
+    <hr/>
+    <b>Restore Backup</b>
+    <div class="small" style="margin-top:6px">Upload your backup JSON to restore.</div>
+    <div class="hstack" style="margin-top:10px">
+      <input type="file" id="backupFile" class="input" accept="application/json"/>
+      <button class="btn btn-primary" id="btnRestore">Restore</button>
+    </div>
+  </div>
+</div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/ui.js"></script>
+  
+<script>
+(function(){
+  const auth = BMUI.gateRole("admin");
+  if(!auth) return;
+  const {st} = auth;
+
+  BMApp.qs("#adminGate").style.display="none";
+  BMApp.qs("#settingsPanel").style.display="block";
+
+  // Company
+  BMApp.qs("#companyName").value = st.company?.name || "";
+  BMApp.qs("#currency").value = st.company?.currency || "PKR";
+
+  BMApp.qs("#btnSaveCompany").addEventListener("click", ()=>{
+    const name = BMApp.qs("#companyName").value.trim() || "My Business Finance";
+    const cur = BMApp.qs("#currency").value.trim() || "PKR";
+    const st2 = BMApp.loadState();
+    st2.company = {name, currency: cur};
+    BMApp.saveState(st2);
+    BMApp.toast("Company saved.", "good");
+    setTimeout(()=>location.reload(), 300);
+  });
+
+  // Approval
+  BMApp.qs("#requireApproval").value = String(!!st.settings.requireApproval);
+  BMApp.qs("#btnSaveApproval").addEventListener("click", ()=>{
+    const v = BMApp.qs("#requireApproval").value === "true";
+    const st2 = BMApp.loadState();
+    st2.settings.requireApproval = v;
+    BMApp.saveState(st2);
+    BMApp.toast("Approval setting saved.", "good");
+    setTimeout(()=>location.reload(), 300);
+  });
+
+  // Users
+  function renderUsers(){
+    const box = BMApp.qs("#userList");
+    box.innerHTML = "";
+    (st.users||[]).forEach(u=>{
+      const card = document.createElement("div");
+      card.className="card";
+      card.innerHTML = `
+        <div class="hstack" style="justify-content:space-between;">
+          <div>
+            <b>${BMUI.escapeHtml(u.name)}</b> <span class="pill">${BMUI.escapeHtml(u.role)}</span><br/>
+            <span class="small">username: <b>${BMUI.escapeHtml(u.username)}</b></span>
+          </div>
+          <div class="hstack">
+            <input class="input" style="max-width:180px" type="password" placeholder="New password" data-pw="${u.id}"/>
+            <button class="btn btn-primary btn-small" data-save="${u.id}">Save</button>
+          </div>
+        </div>
+      `;
+      box.appendChild(card);
+    });
+
+    BMApp.qsa("[data-save]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = btn.getAttribute("data-save");
+        const inp = BMApp.qs(`[data-pw="${id}"]`);
+        const pw = (inp.value||"").trim();
+        if(pw.length < 4) return BMApp.toast("Password should be 4+ chars.", "warn");
+        const st2 = BMApp.loadState();
+        const u = (st2.users||[]).find(x=>x.id===id);
+        if(!u) return BMApp.toast("User not found.", "bad");
+        u.password = pw;
+        BMApp.saveState(st2);
+        BMApp.toast("Password updated.", "good");
+        inp.value="";
+      });
+    });
+  }
+  renderUsers();
+
+  // Restore
+  BMApp.qs("#btnRestore").addEventListener("click", async ()=>{
+    const file = BMApp.qs("#backupFile").files[0];
+    if(!file) return BMApp.toast("Choose a backup file first.", "warn");
+    if(!confirm("Restore will overwrite current data on this browser. Continue?")) return;
+    const res = await BMApp.restoreBackup(file);
+    if(res.ok){
+      BMApp.toast("Restored. Reloading...", "good");
+      setTimeout(()=>location.reload(), 600);
+    }else{
+      BMApp.toast(res.message||"Restore failed", "bad");
+    }
+  });
+})();
+</script>
+
+  <script>
+    // global sidebar actions
+    (function(){
+      const auth = BMApp.requireAuth();
+      if(!auth) return;
+      BMUI.renderTopbar();
+      BMUI.setActiveNav();
+      BMUI.setCounts();
+
+      const backupBtn = BMApp.qs("#btnBackup");
+      if(backupBtn) backupBtn.addEventListener("click", ()=>BMApp.downloadBackup());
+
+      const resetBtn = BMApp.qs("#btnReset");
+      if(resetBtn) resetBtn.addEventListener("click", ()=>{
+        if(confirm("Reset all data on this browser?")){
+          BMApp.resetAll();
+          BMApp.toast("Reset done. Please login again.", "warn");
+          setTimeout(()=>location.href="login.html", 500);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

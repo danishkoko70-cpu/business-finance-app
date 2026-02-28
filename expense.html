@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Expense • Finance App</title>
+  <link rel="stylesheet" href="assets/css/style.css"/>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo"><img src="/assets/img/logo.png" alt=""/></div>
+        <div>
+          <h1 id="brandTitle">My Business Finance</h1>
+          <small></small>
+        </div>
+      </div>
+      <div class="userchip" id="topbarUser"></div>
+    </div>
+
+    <div class="grid">
+      <aside class="sidebar">
+        <nav class="nav">
+          <a href="dashboard.html">Dashboard <span class="badge" data-count="income">0</span></a>
+          <a href="income.html">Income <span class="badge" data-count="income">0</span></a>
+          <a href="expense.html">Expense <span class="badge" data-count="expense">0</span></a>
+          <a href="sales.html">Sales <span class="badge" data-count="sales">0</span></a>
+          <a href="clients.html">Clients <span class="badge" data-count="clients">0</span></a>
+          <a href="purchases.html">Purchases <span class="badge" data-count="purchases">0</span></a>
+          <a href="bank.html">Bank <span class="badge" data-count="bank">0</span></a>
+          <a href="approvals.html">Approvals <span class="badge" id="pendingBadge" data-count="approvals">0</span></a>
+          <a href="reports.html">Reports <span class="badge">CSV</span></a>
+          <a href="settings.html">Settings <span class="badge">Admin</span></a>
+          <a href="profile.html">Profile <span class="badge">Me</span></a>
+          <a href="help.html">Help <span class="badge">Guide</span></a>
+        </nav>
+        <hr/>
+        <div class="small">
+          <b>Login default:</b><br/>
+          admin / admin123<br/>
+          manager / manager123<br/>
+          <div style="margin-top:10px">
+            <button class="btn btn-small" id="btnBackup">Backup</button>
+            <button class="btn btn-small" id="btnReset">Reset</button>
+          </div>
+          <div style="margin-top:8px" class="small">
+            Backup downloads JSON (safe). Reset clears local data for this browser.
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        
+<div class="vstack">
+  <div class="hstack" style="justify-content:space-between;">
+    <div>
+      <h2 style="margin:0">Expense</h2>
+      <div class="small">Track all business expenses.</div>
+    </div>
+    <div class="hstack">
+      <button class="btn btn-small" id="btnExport">Export CSV</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <b>Add New</b>
+    <div class="formgrid" style="margin-top:10px">
+      
+<div><label>Date</label><input class="input" id="date" type="date"/></div>
+<div><label>Vendor</label><input class="input" id="vendor" placeholder="Shop / Office / Person"/></div>
+<div><label>Category</label><input class="input" id="category" placeholder="Rent / Fuel / Salary / Other"/></div>
+<div><label>Amount</label><input class="input" id="amount" placeholder="e.g. 1200"/></div>
+<div><label>Note</label><input class="input" id="note" placeholder="Optional"/></div>
+
+      <div style="display:flex; align-items:flex-end; gap:10px">
+        <button class="btn btn-primary" id="btnAdd">Add</button>
+        <button class="btn" id="btnClear">Clear</button>
+      </div>
+    </div>
+    <div class="small" id="approvalHint" style="margin-top:8px; display:none">
+      Approval is enabled. Records created by Manager will be <span class="pill warn">pending</span> until Admin approves.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hstack" style="justify-content:space-between;">
+      <b>Records</b>
+      <div class="hstack">
+        <input class="input" id="search" placeholder="Search..." style="max-width:260px"/>
+        <select id="filterStatus" class="input" style="max-width:160px">
+          <option value="all">All</option>
+          <option value="approved">Approved</option>
+          <option value="pending">Pending</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+    </div>
+    <div class="tablewrap" style="margin-top:10px">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th><th>Vendor</th><th>Category</th><th>Amount</th><th>Note</th><th>By</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="small" style="margin-top:10px">Tip: Data is saved in this browser (localStorage). Use Backup button for safety.</div>
+  </div>
+</div>
+
+      </main>
+    </div>
+  </div>
+
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/ui.js"></script>
+  
+<script>
+window.__MODULE_IMPL__ = {};
+
+window.__MODULE_IMPL__.modulePostProcess = function(obj){
+  if(!obj.date) obj.date = new Date().toISOString().slice(0,10);
+  return {ok:true, obj};
+};
+window.__MODULE_IMPL__.moduleRow = function(rec, pill, currency){
+  return `<tr>
+    <td>${BMUI.escapeHtml(rec.date||"")}</td>
+    <td>${BMUI.escapeHtml(rec.vendor||"")}</td>
+    <td>${BMUI.escapeHtml(rec.category||"")}</td>
+    <td><b>${BMApp.fmtMoney(rec.amount, currency)}</b></td>
+    <td>${BMUI.escapeHtml(rec.note||"")}</td>
+    <td class="small">${BMUI.escapeHtml(rec.createdBy||"")}</td>
+    <td>${pill(rec.status)}</td>
+    <td>
+      <button class="btn btn-small" data-action="edit" data-id="${rec.id}">Edit</button>
+      <button class="btn btn-small btn-danger" data-action="delete" data-id="${rec.id}">Delete</button>
+    </td>
+  </tr>`;
+};
+
+</script>
+
+<script>
+(function(){
+  const auth = BMApp.requireAuth();
+  if(!auth) return;
+  const {st, user} = auth;
+  const currency = st.company.currency || "";
+
+  const TYPE = "expense";
+
+  const FIELDS = [{"id": "date", "label": "Date", "kind": "text", "required": true, "default": ""}, {"id": "vendor", "label": "Vendor", "kind": "text", "required": true, "default": ""}, {"id": "category", "label": "Category", "kind": "text", "required": true, "default": "General"}, {"id": "amount", "label": "Amount", "kind": "number", "required": true, "default": ""}, {"id": "note", "label": "Note", "kind": "text", "required": false, "default": ""}];
+
+  const getVal = (id)=>BMApp.qs("#"+id).value;
+  const setVal = (id,v)=>{ BMApp.qs("#"+id).value = v ?? ""; };
+
+  function showApprovalHint(){
+    if(st.settings.requireApproval){
+      const el = BMApp.qs("#approvalHint");
+      if(el) el.style.display="block";
+    }
+  }
+
+  function collect(){
+    const obj = {};
+    for(const f of FIELDS){
+      let v = getVal(f.id);
+      if(f.kind==="number"){
+        const n = BMApp.parseAmount(v);
+        if(!isFinite(n)) return {ok:false, message:`Invalid number: ${f.label}`};
+        obj[f.id] = n;
+      }else{
+        obj[f.id] = String(v||"").trim();
+      }
+      if(f.required && !String(obj[f.id]??"").trim()){
+        return {ok:false, message:`Required: ${f.label}`};
+      }
+    }
+    // module-specific post processing
+    return {ok:true, obj};
+  }
+
+  function clearForm(){
+    for(const f of FIELDS){
+      setVal(f.id, f.default ?? "");
+    }
+  }
+
+  function pill(status){
+    if(status==="approved") return `<span class="pill good">approved</span>`;
+    if(status==="pending") return `<span class="pill warn">pending</span>`;
+    if(status==="rejected") return `<span class="pill bad">rejected</span>`;
+    return `<span class="pill">${BMUI.escapeHtml(status||"")}</span>`;
+  }
+
+  function matchesSearch(rec, q){
+    if(!q) return true;
+    q = q.toLowerCase();
+    for(const [k,v] of Object.entries(rec)){
+      if(String(v??"").toLowerCase().includes(q)) return true;
+    }
+    return false;
+  }
+
+  function render(){
+    const q = BMApp.qs("#search").value.trim();
+    const filter = BMApp.qs("#filterStatus").value;
+
+    const list = (st.data[TYPE]||[]);
+    const rows = list
+      .filter(r=>filter==="all" ? true : r.status===filter)
+      .filter(r=>matchesSearch(r,q))
+      .map(r => rowHtml(r))
+      .join("");
+
+    BMApp.qs("#tbody").innerHTML = rows || `<tr><td colspan="99" class="small">No records yet.</td></tr>`;
+
+    // attach actions
+    BMApp.qsa("[data-action='edit']").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = btn.getAttribute("data-id");
+        const rec = (st.data[TYPE]||[]).find(x=>x.id===id);
+        if(!rec) return;
+        // fill
+        for(const f of FIELDS){
+          setVal(f.id, rec[f.id] ?? "");
+        }
+        BMApp.qs("#btnAdd").textContent = "Update";
+        BMApp.qs("#btnAdd").setAttribute("data-edit-id", id);
+        BMApp.toast("Edit mode: change fields then click Update.", "info");
+        window.scrollTo({top:0, behavior:"smooth"});
+      });
+    });
+
+    BMApp.qsa("[data-action='delete']").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = btn.getAttribute("data-id");
+        if(!confirm("Delete this record?")) return;
+        const res = BMApp.deleteRecord(TYPE, id);
+        if(res.ok){
+          if(res.requested){
+            BMApp.toast("Delete requested. Admin will decide.", "warn");
+          }else{
+            BMApp.toast("Deleted.", "warn");
+          }
+          location.reload();
+        }else{
+          BMApp.toast(res.message || "Failed", "bad");
+        }
+      });
+    });
+  }
+
+  function resetEdit(){
+    BMApp.qs("#btnAdd").textContent = "Add";
+    BMApp.qs("#btnAdd").removeAttribute("data-edit-id");
+  }
+
+  function submit(){
+    const editId = BMApp.qs("#btnAdd").getAttribute("data-edit-id");
+    const c = collect();
+    if(!c.ok){ BMApp.toast(c.message, "bad"); return; }
+
+    // hook
+    const {ok, obj, message} = modulePostProcess(c.obj);
+    if(!ok){ BMApp.toast(message, "bad"); return; }
+
+    if(editId){
+      const res = BMApp.updateRecord(TYPE, editId, obj);
+      if(res.ok){
+        BMApp.toast(st.settings.requireApproval && user.role!=="admin" ? "Updated (pending approval)." : "Updated.", "good");
+        resetEdit();
+        clearForm();
+        location.reload();
+      }else BMApp.toast(res.message||"Update failed", "bad");
+    }else{
+      const res = BMApp.addRecord(TYPE, obj);
+      if(res.ok){
+        BMApp.toast(st.settings.requireApproval && user.role!=="admin" ? "Added (pending approval)." : "Added.", "good");
+        clearForm();
+        location.reload();
+      }else BMApp.toast(res.message||"Add failed", "bad");
+    }
+  }
+
+  function exportCsv(){
+    const res = BMApp.exportCSV(TYPE);
+    if(!res.ok) BMApp.toast(res.message||"Nothing to export", "warn");
+  }
+
+  BMApp.qs("#btnAdd").addEventListener("click", submit);
+  BMApp.qs("#btnClear").addEventListener("click", ()=>{ clearForm(); resetEdit(); });
+  BMApp.qs("#btnExport").addEventListener("click", exportCsv);
+  BMApp.qs("#search").addEventListener("input", render);
+  BMApp.qs("#filterStatus").addEventListener("change", render);
+
+  showApprovalHint();
+  clearForm();
+  render();
+
+  function rowHtml(rec){
+    return moduleRow(rec, pill, currency);
+  }
+
+  // default implementations must be overridden in each page:
+  function modulePostProcess(obj){ return {ok:true, obj}; }
+  function moduleRow(rec, pill, currency){ return `<tr><td>${BMUI.escapeHtml(rec.id)}</td><td>${pill(rec.status)}</td><td></td></tr>`; }
+
+  // inject overrides provided by page
+  const impl = window.__MODULE_IMPL__;
+  if(impl){
+    if(impl.modulePostProcess) modulePostProcess = impl.modulePostProcess;
+    if(impl.moduleRow) moduleRow = impl.moduleRow;
+  }
+})();
+</script>
+
+  <script>
+    // global sidebar actions
+    (function(){
+      const auth = BMApp.requireAuth();
+      if(!auth) return;
+      BMUI.renderTopbar();
+      BMUI.setActiveNav();
+      BMUI.setCounts();
+
+      const backupBtn = BMApp.qs("#btnBackup");
+      if(backupBtn) backupBtn.addEventListener("click", ()=>BMApp.downloadBackup());
+
+      const resetBtn = BMApp.qs("#btnReset");
+      if(resetBtn) resetBtn.addEventListener("click", ()=>{
+        if(confirm("Reset all data on this browser?")){
+          BMApp.resetAll();
+          BMApp.toast("Reset done. Please login again.", "warn");
+          setTimeout(()=>location.href="login.html", 500);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
